@@ -1,0 +1,75 @@
+# ============================================================
+# NeuroDraw — .gitignore
+# ============================================================
+
+# ── ML Model files (NEVER commit to Git) ────────────────────
+# Models are large (100+ MB) and go on Hugging Face Model Hub
+backend/models/*.keras
+backend/models/*.h5
+backend/models/*.pt
+backend/models/*.pth
+backend/models/*.ckpt
+backend/models/*.joblib
+backend/models/*.pkl
+
+# Keep the directory placeholder
+!backend/models/.gitkeep
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.spec
+
+# Virtualenvs
+.env
+.env.local
+.env.*.local
+venv/
+.venv/
+env/
+ENV/
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Frontend ─────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+
+# ── IDEs ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Temp ─────────────────────────────────────────────────────
+*.tmp
+*.bak
+.temp/
+
+# ── Local test scripts (keep check_*.py for devs) ─────────────
+# (left in — they're harmless, no secrets)
