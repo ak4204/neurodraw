@@ -6,18 +6,38 @@ ROUTER_NORMALIZE, and ROUTER_LABELS here ONLY. No other file needs touching.
 """
 
 import os
+import logging
+from huggingface_hub import hf_hub_download
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths & Hugging Face Hub
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-ROUTER_MODEL_FILE  = os.path.join(MODEL_DIR, "drawing_type_3class.keras")
-SPIRAL_MODEL_FILE  = os.path.join(MODEL_DIR, "final_model_Spiral.keras")
-WAVE_MODEL_FILE    = os.path.join(MODEL_DIR, "final_model_Wave.keras")
-UNIFIED_MODEL_FILE = os.path.join(MODEL_DIR, "final_model_Unified.keras")
-PAHAW_MODEL_FILE   = os.path.join(MODEL_DIR, "pahaw_pipeline_v3.joblib")
+HF_REPO_ID = "ak332/neurodraw-models"
+
+def get_model_path(filename: str) -> str:
+    """Return local path if exists, otherwise download from Hugging Face Hub."""
+    local_path = os.path.join(MODEL_DIR, filename)
+    if os.path.exists(local_path):
+        return local_path
+    
+    try:
+        logger.info(f"Downloading {filename} from Hugging Face Hub ({HF_REPO_ID})...")
+        return hf_hub_download(repo_id=HF_REPO_ID, filename=filename, cache_dir=MODEL_DIR)
+    except Exception as e:
+        logger.error(f"Failed to download {filename} from {HF_REPO_ID}: {e}")
+        return local_path # Fallback to local path which will trigger mock mode
+
+ROUTER_MODEL_FILE  = get_model_path("drawing_type_3class.keras")
+SPIRAL_MODEL_FILE  = get_model_path("final_model_Spiral.keras")
+WAVE_MODEL_FILE    = get_model_path("final_model_Wave.keras")
+UNIFIED_MODEL_FILE = get_model_path("final_model_Unified.keras")
+PAHAW_MODEL_FILE   = get_model_path("pahaw_pipeline_v3.joblib")
 
 # ---------------------------------------------------------------------------
 # Routing classifier — change ONLY here when swapping the real model
