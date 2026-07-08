@@ -69,6 +69,10 @@ async def analyze(
     """
     t_start = time.perf_counter()
 
+    # ── 0. Security: File Size Limit ─────────────────────────────────────────
+    if getattr(file, "size", 0) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+
     # ── 1. Read & validate image ─────────────────────────────────────────────
     raw_bytes = await file.read()
     try:
@@ -215,8 +219,12 @@ async def analyze_svc(
     Process a .svc digital pen recording file using the PaHaW classical ML pipeline.
     """
     t_start = time.perf_counter()
+
+    # ── 0. Security: File Size Limit ─────────────────────────────────────────
+    if getattr(file, "size", 0) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+
     raw_bytes = await file.read()
-    
     try:
         # Run PaHaW inference (CPU bound, use executor)
         result = await _run_in_executor(process_svc_file, raw_bytes)
@@ -268,6 +276,11 @@ async def analyze_fusion(
     Combines probabilities using AUC-weighted average.
     """
     t_start = time.perf_counter()
+
+    # ── 0. Security: File Size Limit ─────────────────────────────────────────
+    if getattr(file, "size", 0) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+
     raw_bytes = await file.read()
     
     # Path A: Classical pipeline
