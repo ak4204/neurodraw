@@ -217,40 +217,19 @@ export default function AnalyzeSignal() {
             </div>
           </div>
 
-          <h3 style={{ fontSize: '1.2rem', marginTop: 16 }}>Kinematic Feature Summary</h3>
-          <div className="grid-4">
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Total Samples</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.num_points}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Recording Duration</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.stroke_duration.toFixed(2)}s</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Avg Velocity</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.velocity_mean.toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Max Velocity</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.velocity_max.toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Avg Pressure</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.pressure_mean.toFixed(0)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Max Pressure</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.pressure_max.toFixed(0)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Avg Acceleration</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.acceleration_mean.toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-sub" style={{ textTransform: 'uppercase', fontWeight: 700 }}>Avg Jerk</div>
-              <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 8 }}>{result.features.jerk_mean.toFixed(2)}</div>
-            </div>
+
+          <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Extracted Kinematics</h4>
+          <div className="grid-4" style={{ gap: 16 }}>
+            {result.basic_stats && Object.entries(result.basic_stats).map(([key, val]) => (
+              <div key={key} style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>
+                  {key}
+                </div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>
+                  {val}
+                </div>
+              </div>
+            ))}
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>

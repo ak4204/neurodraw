@@ -1,104 +1,18 @@
-"""
-inference/pahaw_pipeline.py — PaHaW classical ML pipeline wrapper.
-
-Handles .svc digitizer stroke data (X Y timestamp pressure azimuth altitude).
-This pipeline is COMPLETELY isolated from the photo-upload flow.
-It appears ONLY on the /research Model Zoo page.
-"""
-
 import io
 import logging
 import os
 import random
 from typing import Any
-
 import numpy as np
 import pandas as pd
 from scipy.signal import welch
 import pywt
 import nolds
 
-from .config import PAHAW_MODEL_FILE
-
+# Mock logger
 logger = logging.getLogger(__name__)
 
-_pahaw_model = None
-_pahaw_is_mock = True
-_pipeline_obj = None
-
-
-def load_pahaw() -> bool:
-    """Load the PaHaW classical ML pipeline. Returns True if real model loaded."""
-    global _pahaw_model, _pahaw_is_mock, _pipeline_obj
-
-    if not os.path.exists(PAHAW_MODEL_FILE):
-        logger.warning(
-            "PaHaW model not found at %s — using mock inference.", PAHAW_MODEL_FILE
-        )
-        _pahaw_is_mock = True
-        return False
-
-    try:
-        import joblib  # noqa: PLC0415
-
-        obj = joblib.load(PAHAW_MODEL_FILE)
-        _pipeline_obj = obj
-        if isinstance(obj, dict):
-            if "model" in obj:
-                _pahaw_model = obj["model"]
-            elif "pipeline" in obj:
-                _pahaw_model = obj["pipeline"]
-            else:
-                for val in obj.values():
-                    if hasattr(val, "predict"):
-                        _pahaw_model = val
-                        break
-                if _pahaw_model is None:
-                    raise ValueError(f"No predict method found in dict keys: {list(obj.keys())}")
-        else:
-            _pahaw_model = obj
-
-        _pahaw_is_mock = False
-        logger.info("PaHaW pipeline loaded from %s", PAHAW_MODEL_FILE)
-        return True
-    except Exception as exc:
-        logger.error("Failed to load PaHaW pipeline: %s — falling back to mock.", exc)
-        _pahaw_model = None
-        _pahaw_is_mock = True
-        return False
-
-
-def _parse_svc(file_bytes: bytes) -> pd.DataFrame:
-    """
-    Parse .svc file format: tab-separated columns
-    X  Y  timestamp  button  azimuth  altitude pressure
-    """
-    try:
-        text = file_bytes.decode("utf-8", errors="replace")
-        import io
-        f = io.StringIO(text)
-        first_line = f.readline().strip()
-        f.seek(0)
-        
-        try:
-            int(first_line)
-            df = pd.read_csv(f, sep=r'\s+', skiprows=1, header=None)
-        except ValueError:
-            df = pd.read_csv(f, sep=r'\s+', header=None)
-            
-        SVC_COLS = ['y', 'x', 'timestamp', 'button', 'azimuth', 'altitude', 'pressure']
-        n_cols = df.shape[1]
-        df.columns = SVC_COLS[:n_cols]
-        df['timestamp'] = (df['timestamp'] - df['timestamp'].iloc[0]) / 1000.0
-        return df
-    except Exception as e:
-        logger.error("Failed to parse SVC: %s", e)
-        raise ValueError(f"Failed to parse SVC: {e}")
-
-# ===========================================================================
-# Advanced Feature Extraction (from PaHaW V3 Notebook)
-# ===========================================================================
-
+# Copied Feature Extraction Code from PDF
 def compute_velocity(x, y, t):
     dx = np.diff(x); dy = np.diff(y); dt = np.diff(t)
     dt = np.where(dt == 0, 1e-6, dt)
@@ -403,125 +317,53 @@ def extract_task_features(df):
     feats.update(tilt_features(df))
     return feats
 
+if __name__ == "__main__":
+    SVC_COLS = ['y', 'x', 'timestamp', 'button', 'azimuth', 'altitude', 'pressure']
+    def read_svc(filepath):
+        try:
+            with open(filepath, 'r') as f:
+                first_line = f.readline().strip()
+            try:
+                int(first_line)
+                df = pd.read_csv(filepath, sep=r'\s+', skiprows=1, header=None)
+            except ValueError:
+                df = pd.read_csv(filepath, sep=r'\s+', header=None)
+            n_cols = df.shape[1]
+            df.columns = SVC_COLS[:n_cols]
+            df['timestamp'] = (df['timestamp'] - df['timestamp'].iloc[0]) / 1000.0
+            return df
+        except Exception as e:
+            print(f'Error reading {filepath}: {e}')
+            return None
 
-def _mock_result() -> dict[str, Any]:
-    prob = random.uniform(0.3, 0.8)
-    pred = "Parkinson" if prob >= 0.5 else "Healthy"
-    return {
-        "prediction": pred,
-        "probability": prob,
-        "features_extracted": 16,
-        "is_mock": True,
-        "note": "Mock result — pahaw_pipeline_v3.joblib not found in backend/models/",
-    }
-
-
-def process_svc_file(file_bytes: bytes) -> dict[str, Any]:
-    """
-    Run the PaHaW pipeline on raw .svc file bytes.
-    Uses the advanced single-task feature padding trick from V3 pipeline.
-    """
-    if _pahaw_is_mock or _pahaw_model is None or _pipeline_obj is None:
-        return _mock_result()
-
-    try:
-        df = _parse_svc(file_bytes)
-        feats_dict = extract_task_features(df)
+    df = read_svc(r"C:\Users\akank\Downloads\00001__1_1.svc")
+    features = extract_task_features(df)
+    print("Features extracted:", len(features))
+    
+    # Load model
+    import joblib
+    model_path = r"C:\Users\akank\.gemini\antigravity\scratch\neurodraw\backend\models\pahaw_pipeline_v3.joblib"
+    pipeline_obj = joblib.load(model_path)
+    if isinstance(pipeline_obj, dict) and 'model' in pipeline_obj:
+        model = pipeline_obj['model']
+        sc = pipeline_obj['scaler']
+        t_idx = pipeline_obj['top_idx']
+        all_fnames = pipeline_obj['feat_names']
         
-        # Get V3 pipeline mapping logic
-        sc = _pipeline_obj.get('scaler')
-        t_idx = _pipeline_obj.get('top_idx')
-        all_fnames = _pipeline_obj.get('feat_names')
+        fvec = np.zeros(len(all_fnames), dtype=np.float32)
+        for i, fname in enumerate(all_fnames):
+            key = fname.split('__')[-1] if '__' in fname else fname
+            if key in features:
+                fvec[i] = features[key]
         
-        if not sc or not t_idx or not all_fnames:
-            # Fallback for old models
-            feature_vec = np.array(list(feats_dict.values())).reshape(1, -1)
-            pred_int = _pahaw_model.predict(feature_vec)[0]
-            prob = float(_pahaw_model.predict_proba(feature_vec)[0][pred_int]) if hasattr(_pahaw_model, "predict_proba") else 0.99
-            confidence = prob
-        else:
-            # Map into 744 global vector
-            fvec = np.zeros(len(all_fnames), dtype=np.float32)
-            for i, fname in enumerate(all_fnames):
-                key = fname.split('__')[-1] if '__' in fname else fname
-                if key in feats_dict:
-                    fvec[i] = feats_dict[key]
-            
-            fvec = np.nan_to_num(fvec, nan=0.0, posinf=0.0, neginf=0.0)
-            fvec_sc = sc.transform(fvec.reshape(1, -1))
-            fvec_sel = fvec_sc[:, t_idx]
-            
-            pred_int = _pahaw_model.predict(fvec_sel)[0]
-            if hasattr(_pahaw_model, "predict_proba"):
-                pred_prob = _pahaw_model.predict_proba(fvec_sel)[0]
-                confidence = float(pred_prob[pred_int])
-            else:
-                confidence = 0.99
-
-        pred = "Parkinson" if pred_int == 1 else "Healthy"
+        fvec = np.nan_to_num(fvec, nan=0.0, posinf=0.0, neginf=0.0)
+        fvec_sc = sc.transform(fvec.reshape(1, -1))
+        fvec_sel = fvec_sc[:, t_idx]
         
-        # Prepare small basic summary for frontend (avoiding huge dicts)
-        basic_stats = {
-            "Total Samples": len(df),
-            "Duration (s)": round(feats_dict.get('total_duration', 0.0), 2),
-            "Total Distance (px)": round(feats_dict.get('path_length', 0.0), 1),
-            "Avg Velocity": round(feats_dict.get('vel_mean', 0.0), 2),
-            "Avg Pressure": round(feats_dict.get('press_mean', 0.0), 2),
-            "Tremor Index": round(feats_dict.get('vel_tremor_ratio', 0.0), 3)
-        }
-        
-        return {
-            "prediction": pred,
-            "probability": confidence,
-            "confidence": round(confidence * 100, 2),
-            "features_extracted": len(feats_dict),
-            "basic_stats": basic_stats,
-            "is_mock": False,
-        }
-    except Exception as exc:
-        logger.error("PaHaW inference error: %s", exc)
-        raise
-
-def process_manual_features(features: dict[str, float]) -> dict[str, Any]:
-    """
-    Run the PaHaW pipeline on manually entered features.
-    Ensures exact feature order required by the old model (if applicable).
-    """
-    if _pahaw_is_mock or _pahaw_model is None:
-        return _mock_result()
-
-    try:
-        # Ensure exact order matching old _extract_features
-        ordered_keys = [
-            "velocity_mean", "velocity_std", "velocity_max",
-            "acceleration_mean", "jerk_mean",
-            "curvature_mean", "curvature_std",
-            "pressure_mean", "pressure_std", "pressure_min", "pressure_max",
-            "azimuth_mean", "altitude_mean",
-            "stroke_duration", "total_distance", "num_points"
-        ]
-        
-        missing = [k for k in ordered_keys if k not in features]
-        if missing:
-            raise ValueError(f"Missing manual features: {missing}")
-            
-        feature_list = [float(features[k]) for k in ordered_keys]
-        feature_vec = np.array(feature_list).reshape(1, -1)
-
-        if hasattr(_pahaw_model, "predict_proba"):
-            prob_arr = _pahaw_model.predict_proba(feature_vec)[0]
-            prob = float(prob_arr[1]) if len(prob_arr) > 1 else float(prob_arr[0])
-        else:
-            prob = float(_pahaw_model.predict(feature_vec)[0])
-
-        pred = "Parkinson" if prob >= 0.5 else "Healthy"
-        return {
-            "prediction": pred,
-            "probability": prob,
-            "features_extracted": len(feature_list),
-            "features": features,
-            "is_mock": False,
-        }
-    except Exception as exc:
-        logger.error("PaHaW manual inference error: %s", exc)
-        raise
+        pred_int = model.predict(fvec_sel)[0]
+        pred_prob = model.predict_proba(fvec_sel)[0]
+        confidence = float(pred_prob[pred_int])
+        print("PREDICTION:", "Parkinson" if pred_int == 1 else "Healthy")
+        print("CONFIDENCE:", confidence)
+    else:
+        print("Dict layout issue")
