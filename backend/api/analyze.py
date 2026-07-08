@@ -253,3 +253,109 @@ async def analyze_svc(
     request.app.state.cases[case_id] = case
     return case
 
+
+import base64
+from inference.svc_to_image import render_svc_bytes_to_image
+
+@router.post("/analyze-fusion")
+async def analyze_fusion(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """
+    Cross-modal fusion pipeline:
+    Runs classical kinematics on the .svc file AND CNN models on a rendered image of it.
+    Combines probabilities using AUC-weighted average.
+    """
+    t_start = time.perf_counter()
+    raw_bytes = await file.read()
+    
+    # Path A: Classical pipeline
+    try:
+        pahaw_result = await _run_in_executor(process_svc_file, raw_bytes)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"PaHaW error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    # Path B: Render to Image
+    try:
+        pil_image = await _run_in_executor(render_svc_bytes_to_image, raw_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Failed to render image from .svc")
+        
+    # Run Routing Classifier
+    routing_result = await _run_in_executor(classify_image, pil_image)
+    
+    # Run CNN models
+    drawing_type = routing_result["label"]
+    run_specialist = run_spiral if drawing_type == "Spiral" else run_wave
+    
+    specialist_result, unified_result = await asyncio.gather(
+        _run_in_executor(run_specialist, pil_image),
+        _run_in_executor(run_unified, pil_image),
+    )
+    
+    # Convert image to base64 for frontend
+    buf = io.BytesIO()
+    pil_image.save(buf, format="PNG")
+    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+    
+    # Fusion Math
+    w_pahaw = 0.83  # SVM test AUC from PaHaW notebook
+    w_spec = 0.85   # Example CNN Specialist AUC
+    w_uni = 0.86    # Example CNN Unified AUC
+    
+    # Convert to Parkinson probabilities (1.0 = Parkinson)
+    p_pahaw = pahaw_result.get("probability", 0.5)
+    if pahaw_result.get("prediction") == "Healthy":
+        p_pahaw = 1.0 - p_pahaw
+        
+    p_spec = specialist_result.get("prob", 0.5)
+    if specialist_result.get("label") == "Healthy":
+        p_spec = 1.0 - p_spec
+        
+    p_uni = unified_result.get("prob", 0.5)
+    if unified_result.get("label") == "Healthy":
+        p_uni = 1.0 - p_uni
+        
+    total_weight = w_pahaw + w_spec + w_uni
+    fused_prob_parkinson = (p_pahaw * w_pahaw + p_spec * w_spec + p_uni * w_uni) / total_weight
+    
+    fused_prediction = "Parkinson" if fused_prob_parkinson >= 0.5 else "Healthy"
+    fused_confidence = fused_prob_parkinson if fused_prob_parkinson >= 0.5 else (1.0 - fused_prob_parkinson)
+    
+    elapsed_ms = round((time.perf_counter() - t_start) * 1000)
+    case_id = str(uuid.uuid4())
+    
+    case = {
+        "case_id": case_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "analysis_type": "fusion",
+        "rendered_image_b64": img_b64,
+        "fusion_result": {
+            "prediction": fused_prediction,
+            "confidence": round(fused_confidence * 100, 2),
+            "prob_parkinson": round(fused_prob_parkinson * 100, 2),
+            "weights": {
+                "pahaw": w_pahaw,
+                "specialist": w_spec,
+                "unified": w_uni
+            }
+        },
+        "pahaw_result": pahaw_result,
+        "specialist_result": specialist_result,
+        "unified_result": unified_result,
+        "routing_result": routing_result,
+        "inference_time_ms": elapsed_ms,
+        "is_mock": any([
+            pahaw_result.get("is_mock"),
+            specialist_result.get("is_mock"),
+            unified_result.get("is_mock")
+        ])
+    }
+    
+    request.app.state.cases[case_id] = case
+    return case
+

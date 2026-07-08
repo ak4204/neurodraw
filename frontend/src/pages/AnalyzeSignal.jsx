@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
-import { Upload, FileText, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, PenTool, Brain, Loader2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Upload, FileText, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, PenTool, Brain, Loader2, ArrowLeft } from 'lucide-react'
 import { apiFetch } from '../utils/api'
 
 export default function AnalyzeSignal() {
@@ -102,6 +103,9 @@ export default function AnalyzeSignal() {
     <div className="main-content" style={{ flexDirection: 'column', gap: 32, maxWidth: 1000, margin: '0 auto', paddingTop: 20 }}>
       
       <div>
+        <Link to="/analyze" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--c-ink-muted)', textDecoration: 'none', marginBottom: 16, fontSize: '0.9rem', fontWeight: 600 }}>
+          <ArrowLeft size={16} /> Back to Hub
+        </Link>
         <h1 className="page-title" style={{ marginBottom: 8 }}>Handwriting Signal Analysis (.svc)</h1>
         <p className="page-greeting" style={{ fontSize: '1rem' }}>Upload digital pen recordings to extract kinematics, pressure, and tremor features.</p>
       </div>

@@ -8,7 +8,7 @@ import AnalyzeHub from './pages/AnalyzeHub'
 import AnalyzeImage from './pages/AnalyzeImage'
 import AnalyzeSignal from './pages/AnalyzeSignal'
 import PipelineArchitecture from './pages/PipelineArchitecture'
-import DoctorWorkspace from './pages/DoctorWorkspace'
+import AnalyzeFusion from './pages/AnalyzeFusion'
 import Disease from './pages/Disease'
 import History from './pages/History'
 import Reports from './pages/Reports'
@@ -61,14 +61,14 @@ export default function App() {
           <ProtectedLayout><AnalyzeSignal /></ProtectedLayout>
         </ProtectedRoute>
       } />
+      <Route path="/analyze/fusion" element={
+        <ProtectedRoute>
+          <ProtectedLayout><AnalyzeFusion /></ProtectedLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/pipeline" element={
         <ProtectedRoute>
           <ProtectedLayout><PipelineArchitecture /></ProtectedLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/workspace" element={
-        <ProtectedRoute>
-          <ProtectedLayout><DoctorWorkspace /></ProtectedLayout>
         </ProtectedRoute>
       } />
       <Route path="/research" element={
