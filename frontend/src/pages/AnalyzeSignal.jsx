@@ -7,6 +7,13 @@ export default function AnalyzeSignal() {
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState(null)
   const [isManualExpanded, setIsManualExpanded] = useState(false)
+  const [manualForm, setManualForm] = useState({
+    patient_name: '', patient_id: '', doctor_name: '',
+    velocity_mean: '', velocity_std: '', velocity_max: '',
+    acceleration_mean: '', jerk_mean: '', curvature_mean: '', curvature_std: '',
+    pressure_mean: '', pressure_std: '', pressure_min: '', pressure_max: '',
+    azimuth_mean: '', altitude_mean: '', stroke_duration: '', total_distance: '', num_points: ''
+  })
   
   // Pipeline animation state
   const [isProcessing, setIsProcessing] = useState(false)
@@ -88,6 +95,64 @@ export default function AnalyzeSignal() {
     }
   }
 
+  const runManualAnalysis = async () => {
+    setIsProcessing(true)
+    setResult(null)
+    setError(null)
+    
+    for (let i = 0; i < PIPELINE_STEPS.length; i++) {
+      setCurrentStep(i)
+      await new Promise(r => setTimeout(r, 400))
+    }
+
+    try {
+      const requiredFeatures = [
+        "velocity_mean", "velocity_std", "velocity_max",
+        "acceleration_mean", "jerk_mean",
+        "curvature_mean", "curvature_std",
+        "pressure_mean", "pressure_std", "pressure_min", "pressure_max",
+        "azimuth_mean", "altitude_mean",
+        "stroke_duration", "total_distance", "num_points"
+      ]
+      
+      const features = {}
+      for (const key of requiredFeatures) {
+        const val = parseFloat(manualForm[key])
+        if (isNaN(val)) throw new Error(`Please provide a valid number for ${key.replace('_', ' ')}`)
+        features[key] = val
+      }
+      
+      if (!manualForm.patient_name || !manualForm.patient_id) {
+        throw new Error("Patient Name and ID are required")
+      }
+
+      const payload = {
+        patient_name: manualForm.patient_name,
+        patient_id: manualForm.patient_id,
+        doctor_name: manualForm.doctor_name,
+        features
+      }
+      
+      const res = await apiFetch('/analyze-svc-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      
+      if (res.error) throw new Error(res.error)
+      setResult(res.pahaw_result)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setIsProcessing(false)
+      setCurrentStep(PIPELINE_STEPS.length)
+    }
+  }
+
+  const handleFormChange = (e) => {
+    setManualForm({ ...manualForm, [e.target.name]: e.target.value })
+  }
+
   return (
     <div className="main-content" style={{ flexDirection: 'column', gap: 32, maxWidth: 1000, margin: '0 auto', paddingTop: 20 }}>
       
@@ -138,29 +203,38 @@ export default function AnalyzeSignal() {
             <div style={{ padding: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: isManualExpanded ? '#f8fafc' : 'white' }} onClick={() => setIsManualExpanded(!isManualExpanded)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <FileText size={20} color="var(--c-ink-muted)" />
-                <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Manual Clinical Data Entry</h3>
+                <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Manual Feature Entry (Clinical)</h3>
               </div>
               {isManualExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </div>
             
             {isManualExpanded && (
               <div style={{ padding: 24, borderTop: '1px solid #edf2f7' }}>
-                <div style={{ padding: 12, background: 'var(--c-warning)', color: 'white', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, marginBottom: 24, display: 'inline-block' }}>
-                  For Demonstration / Clinical Record Entry Only
+                <div style={{ padding: 12, background: 'var(--c-cyan)', color: 'white', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, marginBottom: 24, display: 'inline-block' }}>
+                  Run inference directly on 16 pre-extracted kinematic features
                 </div>
-                <div className="grid-3" style={{ gap: 20 }}>
-                  <label className="label">Patient ID <input className="input mt-2" placeholder="e.g. PT-1049" /></label>
-                  <label className="label">Drawing Type 
-                    <select className="input select mt-2"><option>Spiral</option><option>Wave</option></select>
-                  </label>
-                  <label className="label">Recording Duration (s) <input className="input mt-2" type="number" /></label>
-                  <label className="label">Avg Pressure <input className="input mt-2" type="number" /></label>
-                  <label className="label">Max Pressure <input className="input mt-2" type="number" /></label>
-                  <label className="label">Avg Velocity (cm/s) <input className="input mt-2" type="number" /></label>
+                
+                <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Patient Information</h4>
+                <div className="grid-3" style={{ gap: 20, marginBottom: 24 }}>
+                  <label className="label">Patient Name <input name="patient_name" value={manualForm.patient_name} onChange={handleFormChange} className="input mt-2" placeholder="John Doe" /></label>
+                  <label className="label">Patient ID <input name="patient_id" value={manualForm.patient_id} onChange={handleFormChange} className="input mt-2" placeholder="PT-1049" /></label>
+                  <label className="label">Attending Doctor <input name="doctor_name" value={manualForm.doctor_name} onChange={handleFormChange} className="input mt-2" placeholder="Dr. Smith" /></label>
                 </div>
-                <label className="label mt-4">Clinical Notes <textarea className="input mt-2" rows="3"></textarea></label>
-                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary" style={{ opacity: 0.5, cursor: 'not-allowed' }}>Save to Records</button>
+
+                <h4 style={{ marginBottom: 12, fontSize: '0.95rem', borderTop: '1px solid #edf2f7', paddingTop: 20 }}>Kinematic & Pressure Features (All Required)</h4>
+                <div className="grid-4" style={{ gap: 16 }}>
+                  {['velocity_mean', 'velocity_std', 'velocity_max', 'acceleration_mean', 'jerk_mean', 'curvature_mean', 'curvature_std', 'pressure_mean', 'pressure_std', 'pressure_min', 'pressure_max', 'azimuth_mean', 'altitude_mean', 'stroke_duration', 'total_distance', 'num_points'].map(feat => (
+                    <label key={feat} className="label" style={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>
+                      {feat.replace('_', ' ')}
+                      <input name={feat} value={manualForm[feat]} onChange={handleFormChange} className="input mt-1" type="number" step="any" placeholder="0.0" style={{ padding: '6px 10px', fontSize: '0.85rem' }} />
+                    </label>
+                  ))}
+                </div>
+                
+                <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-primary" style={{ background: 'var(--c-cyan)' }} onClick={runManualAnalysis}>
+                    Run Inference Pipeline
+                  </button>
                 </div>
               </div>
             )}

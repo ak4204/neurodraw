@@ -164,3 +164,49 @@ def process_svc_file(file_bytes: bytes) -> dict[str, Any]:
     except Exception as exc:
         logger.error("PaHaW inference error: %s", exc)
         raise
+
+def process_manual_features(features: dict[str, float]) -> dict[str, Any]:
+    """
+    Run the PaHaW pipeline on manually entered features.
+    Ensures exact feature order required by the model.
+    """
+    if _pahaw_is_mock or _pahaw_model is None:
+        return _mock_result()
+
+    try:
+        # Ensure exact order matching _extract_features
+        ordered_keys = [
+            "velocity_mean", "velocity_std", "velocity_max",
+            "acceleration_mean", "jerk_mean",
+            "curvature_mean", "curvature_std",
+            "pressure_mean", "pressure_std", "pressure_min", "pressure_max",
+            "azimuth_mean", "altitude_mean",
+            "stroke_duration", "total_distance", "num_points"
+        ]
+        
+        # Verify all keys exist
+        missing = [k for k in ordered_keys if k not in features]
+        if missing:
+            raise ValueError(f"Missing manual features: {missing}")
+            
+        feature_list = [float(features[k]) for k in ordered_keys]
+        feature_vec = np.array(feature_list).reshape(1, -1)
+
+        if hasattr(_pahaw_model, "predict_proba"):
+            prob_arr = _pahaw_model.predict_proba(feature_vec)[0]
+            prob = float(prob_arr[1]) if len(prob_arr) > 1 else float(prob_arr[0])
+        else:
+            prob = float(_pahaw_model.predict(feature_vec)[0])
+
+        pred = "Parkinson" if prob >= 0.5 else "Healthy"
+        return {
+            "prediction": pred,
+            "probability": prob,
+            "features_extracted": len(feature_list),
+            "features": features,
+            "is_mock": False,
+        }
+    except Exception as exc:
+        logger.error("PaHaW manual inference error: %s", exc)
+        raise
+
