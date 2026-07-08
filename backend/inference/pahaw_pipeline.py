@@ -454,9 +454,16 @@ def process_svc_file(file_bytes: bytes) -> dict[str, Any]:
             pred_int = _pahaw_model.predict(fvec_sel)[0]
             if hasattr(_pahaw_model, "predict_proba"):
                 pred_prob = _pahaw_model.predict_proba(fvec_sel)[0]
-                confidence = float(pred_prob[pred_int])
+                raw_conf = float(pred_prob[pred_int])
+                
+                # Apply temperature scaling to soften extreme Platt scaling probabilities
+                import math
+                p = min(max(raw_conf, 0.5001), 0.9999)
+                logit = math.log(p / (1 - p))
+                T = 2.0 # Temperature > 1 softens towards 0.5
+                confidence = 1 / (1 + math.exp(-logit / T))
             else:
-                confidence = 0.99
+                confidence = 0.85 # Muted default
 
         pred = "Parkinson" if pred_int == 1 else "Healthy"
         
