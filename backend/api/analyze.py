@@ -290,7 +290,10 @@ async def analyze_fusion(
     
     # Run CNN models
     drawing_type = routing_result["label"]
-    run_specialist = run_spiral if drawing_type == "Spiral" else run_wave
+    is_other = routing_result.get("is_garbage", False)
+    
+    # If it's anything other than wave or spiral, force it to use the Wave model
+    run_specialist = run_spiral if (drawing_type == "Spiral" and not is_other) else run_wave
     
     specialist_result, unified_result = await asyncio.gather(
         _run_in_executor(run_specialist, pil_image),
@@ -304,8 +307,16 @@ async def analyze_fusion(
     
     # Fusion Math
     w_pahaw = 0.83  # SVM test AUC from PaHaW notebook
-    w_spec = 0.85   # Example CNN Specialist AUC
-    w_uni = 0.86    # Example CNN Unified AUC
+    
+    if is_other:
+        # User request: "if not both just run the kinematic pipeline and vgg wave model"
+        w_spec = 0.85   # Keep the Wave VGG weight
+        w_uni = 0.0     # Drop Unified CNN
+        unified_result["label"] = "Ignored (Out of Dist)"
+        unified_result["prob"] = 0.5
+    else:
+        w_spec = 0.85   # Example CNN Specialist AUC
+        w_uni = 0.86    # Example CNN Unified AUC
     
     # Convert to Parkinson probabilities (1.0 = Parkinson)
     p_pahaw = pahaw_result.get("probability", 0.5)
@@ -321,6 +332,8 @@ async def analyze_fusion(
         p_uni = 1.0 - p_uni
         
     total_weight = w_pahaw + w_spec + w_uni
+    if total_weight == 0: total_weight = 1 # Prevent division by zero
+    
     fused_prob_parkinson = (p_pahaw * w_pahaw + p_spec * w_spec + p_uni * w_uni) / total_weight
     
     fused_prediction = "Parkinson" if fused_prob_parkinson >= 0.5 else "Healthy"
