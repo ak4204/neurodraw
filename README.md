@@ -152,6 +152,3 @@ The app downloads weights automatically on first startup.
 
 This project is for **educational and research purposes only** and is NOT intended for clinical diagnosis or medical use. Results from this platform should never replace consultation with a qualified healthcare professional.
 
----
-
-*Inspired by [NeuroSSL](https://github.com/abcreativeakshay/neurossl) — dementia screening via SSL on brain MRI.*
