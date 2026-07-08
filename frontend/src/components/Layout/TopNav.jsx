@@ -51,7 +51,7 @@ export default function TopNav() {
     <div className="top-nav">
       <div className="logo-container">
         <div className="logo-icon">
-          <Waves size={20} strokeWidth={2.5} />
+          <BrainCircuit size={20} strokeWidth={2.5} />
         </div>
         NeuroDraw
       </div>

@@ -1,6 +1,6 @@
 /* Utility API client for NeuroDraw frontend */
 
-const BASE_URL = '/api'
+const BASE_URL = import.meta.env.PROD ? 'https://ak332-neurodraw-backend.hf.space/api' : '/api'
 
 async function handleResponse(res) {
   if (!res.ok) {

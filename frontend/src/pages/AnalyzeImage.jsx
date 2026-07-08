@@ -6,7 +6,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useNotif } from '../context/NotifContext'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.PROD ? 'https://ak332-neurodraw-backend.hf.space/api' : '/api'
 
 const MODELS = [
   { key: 'auto', label: 'Auto (Recommended)', desc: 'Router picks the best specialist model automatically.' },
