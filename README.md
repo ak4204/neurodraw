@@ -2,6 +2,7 @@
 ### AI Research Platform for Parkinson's Handwriting Analysis
 
 [![HF Space](https://img.shields.io/badge/🤗%20HuggingFace-Space-yellow)](https://huggingface.co/spaces/YOUR_USERNAME/neurodraw)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success.svg)](https://neurodraw.wacronmarket.shop/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![React 18](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev)
@@ -9,6 +10,9 @@
 > ⚠️ **Research demonstration only** — NOT a medical device. Not for clinical diagnosis.
 
 A research-lab-grade web platform demonstrating a **multi-model Parkinson's Disease detection system** based on handwriting analysis (spiral and wave drawings).
+
+**🔗 Live Platform:** [https://neurodraw.wacronmarket.shop/](https://neurodraw.wacronmarket.shop/)  
+*(Note: Access is restricted to authorized researchers via Google Sign-In).*
 
 ---
 
@@ -97,9 +101,14 @@ backend/models/
 └── pahaw_pipeline_v3.joblib      ← Classical kinematic pipeline
 ```
 
-## 🤗 Hugging Face Deployment
+## 🤗 Hosting & Deployment
 
-Mirrors the [NeuroSSL deployment pattern](https://github.com/abcreativeakshay/neurossl).
+The application is deployed using a modern, scalable static architecture:
+
+1. **Hosting**: Hosted securely on **Hugging Face Spaces** using their Static web hosting environment.
+2. **Frontend**: Built as a React 18 Single Page Application (SPA) compiled with Vite.
+3. **Custom Domain**: Served on a custom domain (`neurodraw.wacronmarket.shop`) connected securely to the Hugging Face static space endpoint.
+4. **Security**: Protected by Firebase Google Authentication. Only pre-authorized researcher emails can access the platform.
 
 ### Step 1: Upload models to HF Model Hub
 ```bash
