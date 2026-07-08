@@ -224,7 +224,7 @@ async def analyze_svc(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error processing SVC file: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error processing file")
+        raise HTTPException(status_code=500, detail=f"Internal server error processing file: {str(e)}")
 
     elapsed_ms = round((time.perf_counter() - t_start) * 1000)
     case_id = str(uuid.uuid4())
