@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Info, RotateCcw, CheckCircle } from 'lucide-react'
+import { Info, RotateCcw, CheckCircle, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const MODEL_INTERNALS = [
   {
@@ -55,6 +57,8 @@ function Row({ label, value }) {
 export default function Settings() {
   const [qualityMode, setQualityMode] = useState(() => localStorage.getItem('qualityMode') || 'standard')
   const [resetDone, setResetDone] = useState(false)
+  const navigate = useNavigate()
+  const { logout, user } = useAuth()
 
   const handleQualityMode = (mode) => {
     setQualityMode(mode)
@@ -179,14 +183,33 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Reset */}
-      <button
-        onClick={handleReset}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 99, background: '#f1f5f9', color: 'var(--c-ink)', fontWeight: 600, border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.9rem' }}
-      >
-        <RotateCcw size={16} />
-        {resetDone ? '✓ Reset complete' : 'Reset to defaults'}
-      </button>
+      {/* Actions */}
+      <Section title="Account & Actions">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+          <button
+            onClick={async () => {
+              await logout()
+              navigate('/login')
+            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 99, background: '#fef2f2', color: '#dc2626', fontWeight: 600, border: '1px solid #fecaca', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
+          >
+            <LogOut size={16} />
+            Sign Out {user?.email && `(${user.email})`}
+          </button>
+          
+          <button
+            onClick={handleReset}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 99, background: '#f1f5f9', color: 'var(--c-ink)', fontWeight: 600, border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+            onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+          >
+            <RotateCcw size={16} />
+            {resetDone ? '✓ Reset complete' : 'Reset to defaults'}
+          </button>
+        </div>
+      </Section>
     </div>
   )
 }
