@@ -62,7 +62,6 @@ input, select, textarea { font-family: var(--font); }
 
 #root { width: 100%; min-height: 100vh; }
 
-/* ── App Shell (The white box) ──────────────────────────────── */
 .app-container {
   width: 100%;
   max-width: 1600px;
@@ -74,6 +73,7 @@ input, select, textarea { font-family: var(--font); }
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  margin: 2vh auto;
 }
 
 /* ── Top Navigation ─────────────────────────────────────────── */
