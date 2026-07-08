@@ -390,3 +390,28 @@ tr:last-child td { border-bottom: none; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
 
+/* ── Responsive Media Queries ──────────────────────────────── */
+@media (max-width: 1200px) {
+  .app-container {
+    width: 96%;
+    border-radius: 16px;
+    margin: 2vh auto;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-title { font-size: 3rem; }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .top-nav { flex-direction: column; gap: 16px; padding: 20px; }
+  .nav-links { flex-wrap: wrap; justify-content: center; }
+  .main-content { flex-direction: column !important; }
+}
+
+@media (max-width: 600px) {
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .hero-title { font-size: 2.2rem; }
+  .hero-btn { padding: 12px 32px; font-size: 1rem; }
+}
+
