@@ -99,7 +99,15 @@ export default function AnalyzeFusion() {
 
       {!result && !isProcessing && (
         <>
-          <div className="card" style={{ padding: 40, border: '2px dashed #E2E8F0', textAlign: 'center', cursor: 'pointer', background: 'var(--c-surface)' }} onClick={() => fileInput.current?.click()}>
+          <div 
+            className="card" 
+            style={{ padding: 40, border: '2px dashed #E2E8F0', textAlign: 'center', cursor: 'pointer', background: 'var(--c-surface)', transition: 'all 0.2s' }} 
+            onClick={() => fileInput.current?.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); if (e.dataTransfer.files[0]) parseSVC(e.dataTransfer.files[0]) }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-success)'; e.currentTarget.style.background = 'var(--c-success-light)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = 'var(--c-surface)' }}
+          >
             <input type="file" ref={fileInput} accept=".svc" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) parseSVC(e.target.files[0]) }} />
             <div style={{ width: 64, height: 64, background: 'var(--c-success-light)', borderRadius: 20, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-success)' }}>
               <Upload size={32} />
