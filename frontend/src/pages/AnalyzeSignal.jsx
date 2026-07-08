@@ -210,7 +210,7 @@ export default function AnalyzeSignal() {
                 {result.prediction === 'Parkinson' ? 'Parkinson-Consistent' : 'Healthy-Consistent'}
               </div>
               <div style={{ fontSize: '1rem', color: 'var(--c-ink-muted)', marginTop: 8 }}>
-                Confidence: <strong style={{ color: 'var(--c-ink)' }}>{(Math.abs(result.probability - 0.5) * 200 + 50).toFixed(1)}%</strong>
+                Confidence: <strong style={{ color: 'var(--c-ink)' }}>{result.confidence.toFixed(1)}%</strong>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
