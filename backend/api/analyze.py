@@ -21,14 +21,7 @@ from PIL import Image
 from inference.quality_check import assess_quality
 from inference.router import classify_image
 from inference.vgg16_models import run_spiral, run_unified, run_wave
-from inference.pahaw_pipeline import process_svc_file, process_manual_features
-from pydantic import BaseModel
-
-class ManualFeatures(BaseModel):
-    patient_name: str
-    patient_id: str
-    doctor_name: str
-    features: dict[str, float]
+from inference.pahaw_pipeline import process_svc_file
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -251,57 +244,6 @@ async def analyze_svc(
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "mode": "pahaw_svc",
         "analysis_type": "svc",
-        "pahaw_result": result,
-        "explanation": explanation,
-        "inference_time_ms": elapsed_ms,
-        "is_mock": result.get("is_mock", False),
-    }
-
-    request.app.state.cases[case_id] = case
-    return case
-
-
-@router.post("/analyze-svc-manual")
-async def analyze_svc_manual(
-    request: Request,
-    payload: ManualFeatures,
-):
-    """
-    Process manually entered kinematic features.
-    """
-    t_start = time.perf_counter()
-    
-    try:
-        result = await _run_in_executor(process_manual_features, payload.features)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error processing manual features: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error processing features")
-
-    elapsed_ms = round((time.perf_counter() - t_start) * 1000)
-    case_id = str(uuid.uuid4())
-
-    is_pd = result.get("prediction") == "Parkinson"
-    prob = result.get("probability", 0.5)
-    conf = min(max(max(prob, 1 - prob), 0.5), 0.96)
-
-    explanation = (
-        f"The sequential PaHaW pipeline analyzed {result.get('features_extracted', 0)} manually entered kinematic features "
-        f"for {payload.patient_name} (ID: {payload.patient_id}) and found patterns consistent with {'Parkinsons' if is_pd else 'healthy'} motor function "
-        f"at {conf:.0%} confidence. This result is a research indicator only."
-    )
-
-    case = {
-        "case_id": case_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "mode": "pahaw_manual",
-        "analysis_type": "svc_manual",
-        "patient_info": {
-            "name": payload.patient_name,
-            "id": payload.patient_id,
-            "doctor": payload.doctor_name,
-        },
         "pahaw_result": result,
         "explanation": explanation,
         "inference_time_ms": elapsed_ms,
