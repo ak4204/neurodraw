@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Waves, Bell, Settings as SettingsIcon, CheckCircle, AlertCircle, Info, X, Trash2 } from 'lucide-react'
+import { BrainCircuit, Bell, Settings as SettingsIcon, CheckCircle, AlertCircle, Info, X, Trash2 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useNotif } from '../../context/NotifContext'
 

@@ -22,7 +22,7 @@ export default function Landing() {
         <p className="hero-subtitle">
           A multi-model deep learning platform analyzing kinematic and visual biomarkers in spiral and wave drawings.
         </p>
-        <Link to="/dashboard" className="hero-btn">
+        <Link to="/login" className="hero-btn">
           Enter Platform
         </Link>
       </div>
