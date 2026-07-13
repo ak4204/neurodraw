@@ -1,6 +1,7 @@
 import io
 import numpy as np
 from PIL import Image, ImageDraw
+from scipy.ndimage import gaussian_filter1d
 
 from .pahaw_pipeline import _parse_svc
 
@@ -9,12 +10,18 @@ def render_svc_bytes_to_image(file_bytes: bytes, img_size: int = 512) -> Image.I
     Renders an .svc file byte stream into a CNN-ready PIL Image.
     Only draws the pen-down segments (button == 1).
     Applies bounding-box normalization to center the drawing with 10% padding.
+    Smooths coordinates and uses super-sampling for anti-aliasing to prevent 
+    'digital tremor' from confusing the CNN.
     """
     df = _parse_svc(file_bytes)
     
-    x = df['x'].values
-    y = df['y'].values
+    x_raw = df['x'].values.astype(float)
+    y_raw = df['y'].values.astype(float)
     btn = df['button'].values
+    
+    # 1. Smooth coordinates to remove digital hardware jaggedness
+    x = gaussian_filter1d(x_raw, sigma=2)
+    y = gaussian_filter1d(y_raw, sigma=2)
     
     on_mask = btn == 1
     if not np.any(on_mask):
@@ -34,14 +41,17 @@ def render_svc_bytes_to_image(file_bytes: bytes, img_size: int = 512) -> Image.I
     y_min -= pad_y
     y_max += pad_y
     
-    scale_x = img_size / (x_max - x_min)
-    scale_y = img_size / (y_max - y_min)
+    # 2. Render at 4x resolution (super-sampling) for anti-aliasing
+    render_size = img_size * 4
+    
+    scale_x = render_size / (x_max - x_min)
+    scale_y = render_size / (y_max - y_min)
     scale = min(scale_x, scale_y)
     
-    off_x = (img_size - (x_max - x_min) * scale) / 2
-    off_y = (img_size - (y_max - y_min) * scale) / 2
+    off_x = (render_size - (x_max - x_min) * scale) / 2
+    off_y = (render_size - (y_max - y_min) * scale) / 2
     
-    img = Image.new("RGB", (img_size, img_size), "white")
+    img = Image.new("RGB", (render_size, render_size), "white")
     draw = ImageDraw.Draw(img)
     
     # We want to draw continuous paths
@@ -52,6 +62,10 @@ def render_svc_bytes_to_image(file_bytes: bytes, img_size: int = 512) -> Image.I
             px2 = (x[i] - x_min) * scale + off_x
             py2 = (y[i] - y_min) * scale + off_y
             
-            draw.line([(px1, py1), (px2, py2)], fill="black", width=3)
+            # Draw thicker line relative to 4x resolution
+            draw.line([(px1, py1), (px2, py2)], fill="black", width=12, joint="curve")
             
+    # 3. Resize down with high-quality Lanczos resampling
+    img = img.resize((img_size, img_size), Image.Resampling.LANCZOS)
+    
     return img
